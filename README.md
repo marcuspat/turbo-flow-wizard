@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `wiz.sh` script is an interactive setup wizard that generates project-specific configuration files for Claude integration. It guides users through a series of questions about their project and automatically generates a `CLAUDE.pre` file that can be merged with existing `CLAUDE.md` configuration.
+The `turbo-flow-wizard.sh` script is an interactive setup wizard that generates project-specific configuration files for Claude integration. It guides users through a series of questions about their project and automatically generates a `CLAUDE.pre` file that can be merged with existing `CLAUDE.md` configuration.
 
 ## Purpose
 
@@ -29,14 +29,14 @@ The wizard is designed to:
 
 ```bash
 # Run the wizard
-./wiz.sh
+./turbo-flow-wizard.sh
 ```
 
 ### Permissions
 
 Make sure the script is executable:
 ```bash
-chmod +x wiz.sh
+chmod +x turbo-flow-wizard.sh
 ```
 
 ## Workflow
@@ -129,7 +129,7 @@ The wizard generates a `CLAUDE.pre` file containing:
 
 ```
 project/
-├── wiz.sh                    # The wizard script
+├── turbo-flow-wizard.sh      # The wizard script
 ├── CLAUDE.md                 # Existing Claude configuration
 ├── CLAUDE.md.OLD            # Backup of original configuration
 ├── CLAUDE.pre               # Generated configuration (temporary)
@@ -217,7 +217,7 @@ The wizard uses color-coded logging:
 3. **Permission denied**
    ```bash
    # Make script executable
-   chmod +x wiz.sh
+   chmod +x turbo-flow-wizard.sh
    ```
 
 4. **Wiki repository issues**
@@ -237,7 +237,7 @@ If the wizard fails, you can:
 git clone https://github.com/ruvnet/claude-flow.wiki.git claude-flow.wiki
 
 # Restart wizard
-./wiz.sh
+./turbo-flow-wizard.sh
 ```
 
 ## Best Practices
@@ -262,4 +262,4 @@ For issues or questions:
 
 ---
 
-*This manual documents the wiz.sh script v2.0.0 Alpha for Claude Flow Setup Wizard.*
+*This manual documents the turbo-flow-wizard.sh script v2.0.0 Alpha for Claude Flow Setup Wizard.*

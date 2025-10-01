@@ -244,26 +244,70 @@ ask_questions() {
 get_optional_context() {
     echo
     echo -e "${PURPLE}${BOLD}📝 Optional Project Context${NC}"
-    echo -e "${YELLOW}Provide additional details about your project (press Enter when done):${NC}"
+    echo -e "${YELLOW}Provide additional details about your project:${NC}"
     echo "Examples: What problem does it solve? Who are the users? Any specific requirements?"
+    echo "Type your context and press Ctrl-D (or Ctrl-Z on Windows) when finished, or just press Enter to skip:"
     echo "--------------------------------------------------------------------------------"
 
-    # Use temporary file for multi-line input
+    # Use a simple, robust method to read context
     local temp_context=$(mktemp)
+    local input_lines=0
 
-    # Read multi-line input
-    while IFS= read -r line; do
-        [ "$line" = "###END###" ] && break
-        echo "$line" >> "$temp_context"
+    # Create a marker file to signal when to stop reading
+    local stop_marker=$(mktemp)
+
+    # Start a background process to read input with timeout
+    {
+        # Set a 15 second timeout for the entire input process
+        timeout 15s cat > "$temp_context" 2>/dev/null || true
+        touch "$stop_marker"
+    } &
+
+    local reader_pid=$!
+    local timeout_counter=0
+    local max_wait=20  # Maximum 20 seconds wait
+
+    # Wait for either input completion or timeout
+    while [ $timeout_counter -lt $max_wait ]; do
+        if [ -f "$stop_marker" ]; then
+            break
+        fi
+
+        # Check if the reader process is still running
+        if ! kill -0 $reader_pid 2>/dev/null; then
+            break
+        fi
+
+        sleep 1
+        ((timeout_counter++))
     done
 
-    PROJECT_CONTEXT=$(cat "$temp_context" 2>/dev/null || echo "")
-    rm -f "$temp_context"
+    # Clean up the background process if it's still running
+    if kill -0 $reader_pid 2>/dev/null; then
+        kill $reader_pid 2>/dev/null
+        wait $reader_pid 2>/dev/null || true
+        echo
+        warn "⏰ Context input timed out after 15 seconds"
+    fi
 
-    if [ -n "$PROJECT_CONTEXT" ]; then
-        success "✅ Project context captured"
+    # Clean up marker file
+    rm -f "$stop_marker"
+
+    # Read the captured content
+    if [ -f "$temp_context" ]; then
+        input_lines=$(wc -l < "$temp_context" 2>/dev/null || echo 0)
+        PROJECT_CONTEXT=$(cat "$temp_context" 2>/dev/null || echo "")
+        rm -f "$temp_context"
     else
-        warn "⚠️  No additional context provided"
+        input_lines=0
+        PROJECT_CONTEXT=""
+    fi
+
+    if [ -n "$PROJECT_CONTEXT" ] && [ "$input_lines" -gt 0 ]; then
+        success "✅ Project context captured ($input_lines lines)"
+    else
+        log "ℹ️  No additional context provided"
+        PROJECT_CONTEXT=""
     fi
 }
 
@@ -402,8 +446,21 @@ show_completion_status() {
     echo -e "${GREEN}${BOLD}✨ Your project configuration is being optimized by Claude!${NC}"
 }
 
+# Set default values for all variables
+set_defaults() {
+    APP_CATEGORY="web"
+    APP_TYPE="fullstack"
+    FRONTEND="React"
+    BACKEND="Node.js/Express"
+    DATABASE="PostgreSQL"
+    METHODOLOGY="SPARC"
+    FEATURES=()
+    PROJECT_CONTEXT=""
+}
+
 # Main execution
 main() {
+    set_defaults
     display_banner
     setup_wiki
     ask_questions

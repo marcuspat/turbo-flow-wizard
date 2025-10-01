@@ -164,8 +164,8 @@ ask_questions() {
     # Database
     if [[ "$APP_CATEGORY" == "web" || "$APP_CATEGORY" == "api" || "$APP_CATEGORY" == "data" ]]; then
         echo "Database:"
-        echo "1) PostgreSQL  2) MySQL  3) MongoDB  4) Redis  5) SQLite  6) Elasticsearch  7) DynamoDB  8) Firebase  9) No database"
-        read -p "Database choice (1-9): " db_choice
+        echo "1) PostgreSQL  2) MySQL  3) MongoDB  4) Redis  5) SQLite  6) Elasticsearch  7) DynamoDB  8) Firebase  9) Supabase  10) No database"
+        read -p "Database choice (1-10): " db_choice
         case $db_choice in
             1) DATABASE="PostgreSQL";;
             2) DATABASE="MySQL";;
@@ -175,7 +175,8 @@ ask_questions() {
             6) DATABASE="Elasticsearch";;
             7) DATABASE="DynamoDB";;
             8) DATABASE="Firebase";;
-            9) DATABASE="None";;
+            9) DATABASE="Supabase";;
+            10) DATABASE="None";;
             *) DATABASE="PostgreSQL";;
         esac
     fi
@@ -240,76 +241,6 @@ ask_questions() {
     done
 }
 
-# Optional context input
-get_optional_context() {
-    echo
-    echo -e "${PURPLE}${BOLD}📝 Optional Project Context${NC}"
-    echo -e "${YELLOW}Provide additional details about your project:${NC}"
-    echo "Examples: What problem does it solve? Who are the users? Any specific requirements?"
-    echo "Type your context and press Ctrl-D (or Ctrl-Z on Windows) when finished, or just press Enter to skip:"
-    echo "--------------------------------------------------------------------------------"
-
-    # Use a simple, robust method to read context
-    local temp_context=$(mktemp)
-    local input_lines=0
-
-    # Create a marker file to signal when to stop reading
-    local stop_marker=$(mktemp)
-
-    # Start a background process to read input with timeout
-    {
-        # Set a 15 second timeout for the entire input process
-        timeout 15s cat > "$temp_context" 2>/dev/null || true
-        touch "$stop_marker"
-    } &
-
-    local reader_pid=$!
-    local timeout_counter=0
-    local max_wait=20  # Maximum 20 seconds wait
-
-    # Wait for either input completion or timeout
-    while [ $timeout_counter -lt $max_wait ]; do
-        if [ -f "$stop_marker" ]; then
-            break
-        fi
-
-        # Check if the reader process is still running
-        if ! kill -0 $reader_pid 2>/dev/null; then
-            break
-        fi
-
-        sleep 1
-        ((timeout_counter++))
-    done
-
-    # Clean up the background process if it's still running
-    if kill -0 $reader_pid 2>/dev/null; then
-        kill $reader_pid 2>/dev/null
-        wait $reader_pid 2>/dev/null || true
-        echo
-        warn "⏰ Context input timed out after 15 seconds"
-    fi
-
-    # Clean up marker file
-    rm -f "$stop_marker"
-
-    # Read the captured content
-    if [ -f "$temp_context" ]; then
-        input_lines=$(wc -l < "$temp_context" 2>/dev/null || echo 0)
-        PROJECT_CONTEXT=$(cat "$temp_context" 2>/dev/null || echo "")
-        rm -f "$temp_context"
-    else
-        input_lines=0
-        PROJECT_CONTEXT=""
-    fi
-
-    if [ -n "$PROJECT_CONTEXT" ] && [ "$input_lines" -gt 0 ]; then
-        success "✅ Project context captured ($input_lines lines)"
-    else
-        log "ℹ️  No additional context provided"
-        PROJECT_CONTEXT=""
-    fi
-}
 
 # Generate CLAUDE.pre file
 generate_claude_pre() {
@@ -332,9 +263,6 @@ generate_claude_pre() {
 - **Database**: ${DATABASE:-"Not applicable"}
 - **Methodology**: $METHODOLOGY
 - **Features**: ${FEATURES[*]}
-
-## Optional Project Context
-$PROJECT_CONTEXT
 
 # ==========================================
 # CLAUDE INTEGRATION INSTRUCTIONS
@@ -388,8 +316,23 @@ run_claude_merge() {
     if command -v claude >/dev/null 2>&1; then
         log "🚀 Executing Claude merge command..."
 
-        # Run the claude command
-        claude "take the CLAUDE.pre file and merge with CLAUDE.md and optimize for the build context contained in the claude.pre" &
+        # Run the claude command to merge all three files
+        claude "Please merge these three files into an optimized CLAUDE.md:
+1. CLAUDE.pre (contains new project-specific configuration)
+2. CLAUDE.md (contains current configuration)
+3. CLAUDE.md.OLD (contains original backup configuration)
+
+Create a cohesive, optimized CLAUDE.md that:
+- Preserves the best elements from all three files
+- Integrates the new project configuration from CLAUDE.pre
+- Maintains critical existing settings from CLAUDE.md
+- Restores important elements from CLAUDE.md.OLD if they were lost
+- Optimizes for the detected project type: $APP_TYPE ($APP_CATEGORY)
+- Uses the specified technology stack: $FRONTEND + $BACKEND + $DATABASE
+- Implements the chosen methodology: $METHODOLOGY
+- Includes the selected features: ${FEATURES[*]}
+
+The final CLAUDE.md should be production-ready and optimized for this specific project." &
 
         local claude_pid=$!
         echo "🤖 Claude merge started (PID: $claude_pid)"
@@ -401,9 +344,14 @@ run_claude_merge() {
         # Check if Claude is still running
         if kill -0 "$claude_pid" 2>/dev/null; then
             success "✅ Claude merge is running in background"
-            echo -e "${GREEN}📊 Claude is now merging CLAUDE.pre with CLAUDE.md...${NC}"
+            echo -e "${GREEN}📊 Claude is merging 3 files into optimized CLAUDE.md...${NC}"
         else
             success "✅ Claude merge completed quickly"
+            # Clean up CLAUDE.pre after merge
+            if [ -f "$CLAUDE_PRE_FILE" ]; then
+                rm -f "$CLAUDE_PRE_FILE"
+                log "🧹 CLAUDE.pre cleaned up after merge"
+            fi
         fi
 
     else
@@ -411,7 +359,7 @@ run_claude_merge() {
         echo
         echo -e "${YELLOW}📝 Manual Claude Command Required:${NC}"
         echo "   Please run this command manually:"
-        echo -e "${CYAN}   claude \"take the CLAUDE.pre file and merge with CLAUDE.md and optimize for the build context contained in the claude.pre\"${NC}"
+        echo -e "${CYAN}   claude \"Please merge CLAUDE.pre, CLAUDE.md, and CLAUDE.md.OLD into an optimized CLAUDE.md for the $APP_TYPE project\"${NC}"
         echo
         echo -e "${YELLOW}💡 To install Claude CLI:${NC}"
         echo "   npm install -g @anthropic-ai/claude-code"
@@ -424,16 +372,15 @@ show_completion_status() {
     echo
     echo -e "${GREEN}${BOLD}🎉 Setup Complete!${NC}"
     echo
-    echo -e "${CYAN}📋 Generated Files:${NC}"
-    echo "   📄 CLAUDE.pre - Project configuration for Claude integration"
-    echo "   🤖 Claude merge initiated - optimizing CLAUDE.md"
-    echo
     echo -e "${CYAN}🚀 What Happened:${NC}"
     echo "   1. ✅ Project configuration detected via questions"
-    echo "   2. ✅ Optional context captured"
-    echo "   3. ✅ CLAUDE.pre file generated with integration instructions"
-    echo "   4. 🤖 Claude merge command executed"
-    echo "   5. ⏳ Claude is now optimizing CLAUDE.md for your project"
+    echo "   2. ✅ CLAUDE.pre file generated with project-specific settings"
+    echo "   3. 🤖 Claude merge command executed"
+    echo "   4. ⏳ Claude is merging 3 files into optimized CLAUDE.md:"
+    echo "      - CLAUDE.pre (new configuration)"
+    echo "      - CLAUDE.md (current configuration)"
+    echo "      - CLAUDE.md.OLD (backup configuration)"
+    echo "   5. 🧹 CLAUDE.pre will be automatically cleaned up after merge"
     echo
     echo -e "${YELLOW}📊 Configuration Summary:${NC}"
     echo "   📁 App Type: $APP_TYPE ($APP_CATEGORY)"
@@ -464,7 +411,6 @@ main() {
     display_banner
     setup_wiki
     ask_questions
-    get_optional_context
     generate_claude_pre
     run_claude_merge
     show_completion_status

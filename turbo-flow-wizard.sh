@@ -332,26 +332,13 @@ Create a cohesive, optimized CLAUDE.md that:
 - Implements the chosen methodology: $METHODOLOGY
 - Includes the selected features: ${FEATURES[*]}
 
-The final CLAUDE.md should be production-ready and optimized for this specific project." &
+The final CLAUDE.md should be production-ready and optimized for this specific project."
 
-        local claude_pid=$!
-        echo "🤖 Claude merge started (PID: $claude_pid)"
-        log "Claude merge process launched with PID: $claude_pid"
-
-        # Give Claude time to process
-        sleep 2
-
-        # Check if Claude is still running
-        if kill -0 "$claude_pid" 2>/dev/null; then
-            success "✅ Claude merge is running in background"
-            echo -e "${GREEN}📊 Claude is merging 3 files into optimized CLAUDE.md...${NC}"
-        else
-            success "✅ Claude merge completed quickly"
-            # Clean up CLAUDE.pre after merge
-            if [ -f "$CLAUDE_PRE_FILE" ]; then
-                rm -f "$CLAUDE_PRE_FILE"
-                log "🧹 CLAUDE.pre cleaned up after merge"
-            fi
+        success "✅ Claude merge completed"
+        # Clean up CLAUDE.pre after merge
+        if [ -f "$CLAUDE_PRE_FILE" ]; then
+            rm -f "$CLAUDE_PRE_FILE"
+            log "🧹 CLAUDE.pre cleaned up after merge"
         fi
 
     else
@@ -380,7 +367,7 @@ show_completion_status() {
     echo "      - CLAUDE.pre (new configuration)"
     echo "      - CLAUDE.md (current configuration)"
     echo "      - CLAUDE.md.OLD (backup configuration)"
-    echo "   5. 🧹 CLAUDE.pre will be automatically cleaned up after merge"
+    echo "   5. �� CLAUDE.pre will be automatically cleaned up after merge"
     echo
     echo -e "${YELLOW}📊 Configuration Summary:${NC}"
     echo "   📁 App Type: $APP_TYPE ($APP_CATEGORY)"

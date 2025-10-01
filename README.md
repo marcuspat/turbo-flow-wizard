@@ -3,6 +3,8 @@
 
 The `turbo-flow-wizard.sh` script is an interactive setup wizard that generates project-specific configuration files for Claude integration. It guides users through a series of questions about their project and automatically generates a `CLAUDE.pre` file that can be merged with existing `CLAUDE.md` configuration.
 
+IMPORTANT: Execute this from your claude working directory so the API credentials are passed along.
+
 ## Purpose
 
 The wizard is designed to:

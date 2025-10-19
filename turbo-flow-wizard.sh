@@ -329,7 +329,6 @@ run_claude_merge() {
 6. Orchestrated-Agent-Development-Guide.md (workflows & coordination patterns)
 7. FEEDCLAUDE.md (additonal context that might be useful in devpod directory)
 8. DEVELOPMENT_GUIDE.md (addtional context that might be useful in devpod directory)
-9. Orchestrated-Agent-Development-Guide.md (workflows & coordination patterns)
 
 Create a cohesive, optimized CLAUDE.md that:
 - Preserves the best elements from all three files
